@@ -1,20 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_database/ui/firebase_animated_list.dart';
 
-final ThemeData kIOSTheme = new ThemeData(
-  primarySwatch: Colors.orange,
-  primaryColor: Colors.grey[100],
-  primaryColorBrightness: Brightness.light,
-);
-
-final ThemeData kDefaultTheme = new ThemeData(
+final ThemeData defaultTheme = new ThemeData(
   primarySwatch: Colors.purple,
   accentColor: Colors.orangeAccent[400],
 );
@@ -28,17 +21,18 @@ void main() {
   runApp(new VotatoApp());
 }
 
-Future<Null> _ensureLoggedIn() async {
+Future<Null> ensureLoggedIn() async {
   GoogleSignInAccount user = googleSignIn.currentUser;
   if (user == null)
     user = await googleSignIn.signInSilently();
+
   if (user == null) {
-      user = await googleSignIn.signIn();
-      analytics.logLogin();
-    }
+    user = await googleSignIn.signIn();
+    analytics.logLogin();
+  }
+
   if (await auth.currentUser() == null) {
-    GoogleSignInAuthentication credentials =
-    await googleSignIn.currentUser.authentication;
+    GoogleSignInAuthentication credentials = await googleSignIn.currentUser.authentication;
     await auth.signInWithGoogle(
       idToken: credentials.idToken,
       accessToken: credentials.accessToken,
@@ -51,9 +45,7 @@ class VotatoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return new MaterialApp(
       title: "Votato",
-      theme: defaultTargetPlatform == TargetPlatform.iOS
-          ? kIOSTheme
-          : kDefaultTheme,
+      theme: defaultTheme,
       home: new ChatScreen(),
     );
   }
@@ -68,7 +60,9 @@ class ChatMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return new SizeTransition(
       sizeFactor: new CurvedAnimation(
-          parent: animation, curve: Curves.easeOut),
+        parent: animation,
+        curve: Curves.easeOut
+      ),
       axisAlignment: 0.0,
       child: new Container(
         margin: const EdgeInsets.symmetric(vertical: 10.0),
@@ -84,13 +78,13 @@ class ChatMessage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   new Text(
-                      snapshot.value['senderName'],
-                      style: Theme.of(context).textTheme.subhead),
+                    snapshot.value['senderName'],
+                    style: Theme.of(context).textTheme.subhead),
                   new Container(
                     margin: const EdgeInsets.only(top: 5.0),
                     child:
                     new Text(
-                        snapshot.value['text']
+                      snapshot.value['text']
                     ),
                   ),
                 ],
@@ -109,15 +103,15 @@ class ChatScreen extends StatefulWidget {
 }
 
 class ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _textController = new TextEditingController();
-  bool _isComposing = false;
+  final TextEditingController textController = new TextEditingController();
+  bool isComposing = false;
 
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
         appBar: new AppBar(
           title: new Text("Votato"),
-          elevation: Theme.of(context).platform == TargetPlatform.iOS ? 0.0 : 4.0,
+          elevation: 0.0,
         ),
         body: new Column(children: <Widget>[
           new Flexible(
@@ -138,12 +132,14 @@ class ChatScreenState extends State<ChatScreen> {
           new Container(
             decoration:
                 new BoxDecoration(color: Theme.of(context).cardColor),
-            child: _buildTextComposer(),
+            child: buildTextComposer(),
           ),
-        ]));
+        ]
+      )
+    );
   }
 
-  Widget _buildTextComposer() {
+  Widget buildTextComposer() {
     return new IconTheme(
       data: new IconThemeData(color: Theme.of(context).accentColor),
       child: new Container(
@@ -151,51 +147,42 @@ class ChatScreenState extends State<ChatScreen> {
           child: new Row(children: <Widget>[
             new Flexible(
               child: new TextField(
-                controller: _textController,
+                controller: textController,
                 onChanged: (String text) {
                   setState(() {
-                    _isComposing = text.length > 0;
+                    isComposing = text.length > 0;
                   });
                 },
-                onSubmitted: _handleSubmitted,
+                onSubmitted: handleSubmit,
                 decoration:
                     new InputDecoration.collapsed(hintText: "Send a message"),
               ),
             ),
             new Container(
-                margin: new EdgeInsets.symmetric(horizontal: 4.0),
-                child: Theme.of(context).platform == TargetPlatform.iOS
-                    ? new CupertinoButton(
-                        child: new Text("Send"),
-                        onPressed: _isComposing
-                            ? () => _handleSubmitted(_textController.text)
-                            : null,
-                      )
-                    : new IconButton(
-                        icon: new Icon(Icons.send),
-                        onPressed: _isComposing
-                            ? () => _handleSubmitted(_textController.text)
-                            : null,
-                      )),
-          ]),
-          decoration: Theme.of(context).platform == TargetPlatform.iOS
-              ? new BoxDecoration(
-                  border:
-                      new Border(top: new BorderSide(color: Colors.grey[200])))
-              : null),
+              margin: new EdgeInsets.symmetric(horizontal: 4.0),
+              child: new IconButton(
+                icon: new Icon(Icons.send),
+                onPressed: isComposing
+                  ? () => handleSubmit(textController.text) : null,
+              )
+            ),
+          ]
+        ),
+        decoration: new BoxDecoration(border: new Border(top: new BorderSide(color: Colors.grey[200])))
+      ),
     );
   }
 
-  Future<Null> _handleSubmitted(String text) async {
-    _textController.clear();
+  Future<Null> handleSubmit(String text) async {
+    textController.clear();
     setState(() {
-      _isComposing = false;
+      isComposing = false;
     });
-    await _ensureLoggedIn();
-    _sendMessage(text: text);
+    await ensureLoggedIn();
+    sendMessage(text: text);
   }
 
-  void _sendMessage({ String text }) {
+  void sendMessage({ String text }) {
     reference.push().set({
       'text': text,
       'senderName': googleSignIn.currentUser.displayName,
