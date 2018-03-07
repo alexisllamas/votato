@@ -49,7 +49,6 @@ class VotatoApp extends StatelessWidget {
   }
 }
 
-@override
 class ChatMessage extends StatelessWidget {
   ChatMessage({this.snapshot, this.animation});
   final DataSnapshot snapshot;
