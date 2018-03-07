@@ -17,9 +17,7 @@ final analytics = new FirebaseAnalytics();
 final auth = FirebaseAuth.instance;
 final reference = FirebaseDatabase.instance.reference().child('messages');
 
-void main() {
-  runApp(new VotatoApp());
-}
+void main() => runApp(new VotatoApp());
 
 Future<Null> ensureLoggedIn() async {
   GoogleSignInAccount user = googleSignIn.currentUser;
