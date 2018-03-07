@@ -45,5 +45,23 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <!-- reverse url of your client id, for example: -->
+          <string>com.googleusercontent.apps.298003034057-b0js4hbb4jqden9j5q78vuhvjgolnuuk</string>
+          <!-- bundle id, for example: -->
+          <string>com.alexisbbinc.votato</string>
+        </array>
+    </dict>
+  </array>
+  <key>NSCameraUsageDescription</key>                  <!-- new -->
+  <string>Share images with other chat users</string>  <!-- new -->
+  <key>NSPhotoLibraryUsageDescription</key>            <!-- new -->
+  <string>Share images with other chat users</string>  <!-- new -->
 </dict>
 </plist>
