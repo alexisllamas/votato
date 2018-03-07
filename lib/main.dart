@@ -145,11 +145,9 @@ class ChatScreenState extends State<ChatScreen> {
             new Flexible(
               child: new TextField(
                 controller: textController,
-                onChanged: (text) {
-                  setState(() {
-                    isComposing = text.length > 0;
-                  });
-                },
+                onChanged: (text) => setState(() {
+                  isComposing = text.length > 0;
+                }),
                 onSubmitted: handleSubmit,
                 decoration:
                     new InputDecoration.collapsed(hintText: "Send a message"),
