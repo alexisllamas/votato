@@ -118,7 +118,7 @@ class ChatScreenState extends State<ChatScreen> {
               sort: (a, b) => b.key.compareTo(a.key),
               padding: new EdgeInsets.all(8.0),
               reverse: true,
-              itemBuilder: (_, DataSnapshot snapshot, Animation<double> animation, int index) {
+              itemBuilder: (_, snapshot, animation, __) {
                 return new ChatMessage(
                   snapshot: snapshot,
                   animation: animation
@@ -146,7 +146,7 @@ class ChatScreenState extends State<ChatScreen> {
             new Flexible(
               child: new TextField(
                 controller: textController,
-                onChanged: (String text) {
+                onChanged: (text) {
                   setState(() {
                     isComposing = text.length > 0;
                   });
