@@ -15,7 +15,8 @@ final ThemeData defaultTheme = new ThemeData(
 final googleSignIn = new GoogleSignIn();
 final analytics = new FirebaseAnalytics();
 final auth = FirebaseAuth.instance;
-final reference = FirebaseDatabase.instance.reference().child('messages');
+final reference = FirebaseDatabase.instance.reference();
+final surveysReference = reference.child('surveys');
 
 void main() => runApp(new VotatoApp());
 
@@ -44,17 +45,30 @@ class VotatoApp extends StatelessWidget {
     return new MaterialApp(
       title: "Votato",
       theme: defaultTheme,
-      home: new ChatScreen(),
+      home: new VotatoScreen(),
     );
   }
 }
 
-class ChatMessage extends StatelessWidget {
-  ChatMessage({this.snapshot, this.animation});
+class Survey extends StatelessWidget {
+  Survey({this.animation, this.snapshot});
   final DataSnapshot snapshot;
   final Animation animation;
 
-  Widget build(BuildContext context) {
+  Future<Null> handleSubmit() async {
+    await ensureLoggedIn();
+
+    final surveyId = snapshot.key;
+    saveSurvey(surveyId: surveyId);
+  }
+
+  void saveSurvey({ String surveyId }) {
+    surveysReference.child(surveyId).remove();
+    analytics.logEvent(name: 'delete_survey');
+  }
+
+  Widget build(context) {
+    debugPrint(snapshot.value['name']);
     return new SizeTransition(
       sizeFactor: new CurvedAnimation(
         parent: animation,
@@ -62,128 +76,129 @@ class ChatMessage extends StatelessWidget {
       ),
       axisAlignment: 0.0,
       child: new Container(
-        margin: const EdgeInsets.symmetric(vertical: 10.0),
-        child: new Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            new Container(
-              margin: const EdgeInsets.only(right: 16.0),
-              child: new CircleAvatar(backgroundImage: new NetworkImage(snapshot.value['senderPhotoUrl'])),
-            ),
-            new Expanded(
-              child: new Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  new Text(
-                    snapshot.value['senderName'],
-                    style: Theme.of(context).textTheme.subhead),
-                  new Container(
-                    margin: const EdgeInsets.only(top: 5.0),
-                    child:
-                    new Text(
-                      snapshot.value['text']
+        child: new Card(
+          child: new Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              new ListTile(
+                leading: new Icon(Icons.calendar_view_day),
+                title: new Text(snapshot.value['name']),
+                subtitle: new Text(snapshot.value['description']),
+              ),
+              new ButtonTheme.bar(
+                child: new ButtonBar(
+                  children: <Widget>[
+                    new FlatButton(
+                      child: const Text('Ver'),
+                      onPressed: () { /* ... */ },
                     ),
-                  ),
-                ],
+                    new FlatButton(
+                      child: const Text('Delete'),
+                      textColor: Colors.red,
+                      onPressed: handleSubmit,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class ChatScreen extends StatefulWidget {
+class VotatoScreen extends StatefulWidget {
   @override
-  State createState() => new ChatScreenState();
+  State createState() => new VotatoScreenState();
 }
 
-class ChatScreenState extends State<ChatScreen> {
-  final TextEditingController textController = new TextEditingController();
-  bool isComposing = false;
+class VotatoScreenState extends State<VotatoScreen> {
+  final TextEditingController nameTextController = new TextEditingController();
+  final TextEditingController descriptionTextController = new TextEditingController();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(context) {
+
     return new Scaffold(
-        appBar: new AppBar(
-          title: new Text("Votato"),
-          elevation: 0.0,
+      appBar: new AppBar(
+        title: new Text('votato'),
+        elevation: 0.0,
+      ),
+      body: new Column(children: <Widget>[
+        new Flexible(
+          child: new FirebaseAnimatedList(
+            query: surveysReference,
+            sort: (a, b) => b.key.compareTo(a.key),
+            itemBuilder: (_, snapshot, animation, __) {
+              return new Survey(
+                snapshot: snapshot,
+                animation: animation,
+              );
+            },
+          ),
         ),
-        body: new Column(children: <Widget>[
-          new Flexible(
-            child: new FirebaseAnimatedList(
-              query: reference,
-              sort: (a, b) => b.key.compareTo(a.key),
-              padding: new EdgeInsets.all(8.0),
-              reverse: true,
-              itemBuilder: (_, snapshot, animation, __) {
-                return new ChatMessage(
-                  snapshot: snapshot,
-                  animation: animation
-                );
-              },
-            ),
-          ),
-          new Divider(height: 1.0),
-          new Container(
-            decoration:
-                new BoxDecoration(color: Theme.of(context).cardColor),
-            child: buildTextComposer(),
-          ),
-        ]
-      )
-    );
-  }
-
-  Widget buildTextComposer() {
-    return new IconTheme(
-      data: new IconThemeData(color: Theme.of(context).accentColor),
-      child: new Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: new Row(children: <Widget>[
-            new Flexible(
-              child: new TextField(
-                controller: textController,
-                onChanged: (text) => setState(() {
-                  isComposing = text.length > 0;
-                }),
-                onSubmitted: handleSubmit,
-                decoration:
-                    new InputDecoration.collapsed(hintText: "Send a message"),
+      ]),
+      floatingActionButton: new FloatingActionButton(
+        child: new Icon(
+          Icons.add
+        ),
+        onPressed: () {
+          final dialog = new SimpleDialog(
+            title: const Text('Nuevo encuesta'),
+            children: <Widget>[
+              new TextField(
+                controller: nameTextController,
+                onChanged: (text) => debugPrint(text),
+                decoration: new InputDecoration(
+                  hintText: "Nueva encuesta",
+                  labelText: 'Nombre',
+                  contentPadding: new EdgeInsets.symmetric(horizontal: 8.0),
+                ),
               ),
-            ),
-            new Container(
-              margin: new EdgeInsets.symmetric(horizontal: 4.0),
-              child: new IconButton(
-                icon: new Icon(Icons.send),
-                onPressed: isComposing
-                  ? () => handleSubmit(textController.text) : null,
-              )
-            ),
-          ]
-        ),
-        decoration: new BoxDecoration(border: new Border(top: new BorderSide(color: Colors.grey[200])))
+              new TextField(
+                controller: descriptionTextController,
+                onChanged: (text) => debugPrint(text),
+                decoration: new InputDecoration(
+                  hintText: "Encuesta wonita",
+                  labelText: 'Description',
+                  contentPadding: new EdgeInsets.symmetric(horizontal: 8.0),
+                ),
+              ),
+              new RaisedButton(
+                child: new Text('save'),
+                onPressed: () => this.handleSubmit(),
+                color: Colors.blue,
+                textColor: Colors.white,
+              ),
+            ],
+          );
+
+          showDialog(context: context, child: dialog);
+        }
       ),
     );
   }
 
-  Future<Null> handleSubmit(String text) async {
-    textController.clear();
-    setState(() {
-      isComposing = false;
-    });
+  Future<Null> handleSubmit() async {
+    final name = nameTextController.text;
+    final description = descriptionTextController.text;
+
     await ensureLoggedIn();
-    sendMessage(text: text);
+    saveSurvey(name: name, description: description);
+
+    nameTextController.clear();
+    descriptionTextController.clear();
   }
 
-  void sendMessage({ String text }) {
-    reference.push().set({
-      'text': text,
+  void saveSurvey({ String name, String description }) {
+    surveysReference.push().set({
+      'name': name,
+      'description': description,
       'senderName': googleSignIn.currentUser.displayName,
       'senderPhotoUrl': googleSignIn.currentUser.photoUrl,
     });
-    analytics.logEvent(name: 'send_message');
+    analytics.logEvent(name: 'save_survey');
+    Navigator.pop(context);
   }
-
 }
