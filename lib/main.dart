@@ -50,25 +50,44 @@ class VotatoApp extends StatelessWidget {
   }
 }
 
+class SurveyPage extends StatelessWidget{
+  SurveyPage({this.survey});
+
+  final survey;
+
+  @override
+  Widget build(BuildContext context) {
+    debugPrint(survey.value['name']);
+    return new Scaffold(
+      appBar: new AppBar(
+        title: new Text(survey.value['name']),
+      ),
+      body: new Center(
+        child: new Text('hola?')
+      ),
+    );
+  }
+}
+
 class Survey extends StatelessWidget {
   Survey({this.animation, this.snapshot});
   final DataSnapshot snapshot;
   final Animation animation;
 
-  Future<Null> handleSubmit() async {
+  handleSubmit() async {
     await ensureLoggedIn();
 
     final surveyId = snapshot.key;
     saveSurvey(surveyId: surveyId);
   }
 
-  void saveSurvey({ String surveyId }) {
+  saveSurvey({ String surveyId }) {
     surveysReference.child(surveyId).remove();
     analytics.logEvent(name: 'delete_survey');
   }
 
+  @override
   Widget build(context) {
-    debugPrint(snapshot.value['name']);
     return new SizeTransition(
       sizeFactor: new CurvedAnimation(
         parent: animation,
@@ -90,7 +109,11 @@ class Survey extends StatelessWidget {
                   children: <Widget>[
                     new FlatButton(
                       child: const Text('Ver'),
-                      onPressed: () { /* ... */ },
+                      onPressed: () {
+                        Navigator.of(context).push(new PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => new SurveyPage(survey: snapshot),
+                        ));
+                      },
                     ),
                     new FlatButton(
                       child: const Text('Delete'),
@@ -141,7 +164,7 @@ class VotatoScreenState extends State<VotatoScreen> {
       ]),
       floatingActionButton: new FloatingActionButton(
         child: new Icon(
-          Icons.add
+          Icons.add,
         ),
         onPressed: () {
           final dialog = new SimpleDialog(
@@ -180,7 +203,7 @@ class VotatoScreenState extends State<VotatoScreen> {
     );
   }
 
-  Future<Null> handleSubmit() async {
+  handleSubmit() async {
     final name = nameTextController.text;
     final description = descriptionTextController.text;
 
@@ -191,7 +214,7 @@ class VotatoScreenState extends State<VotatoScreen> {
     descriptionTextController.clear();
   }
 
-  void saveSurvey({ String name, String description }) {
+  saveSurvey({ String name, String description }) {
     surveysReference.push().set({
       'name': name,
       'description': description,
